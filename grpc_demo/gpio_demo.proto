@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+// Giữ nguyên package để  tương thích ngược.
+package simgpio;
+
+// ======================= Status & Common =======================
+// Enum trạng thái chuẩn hoá để máy móc bắt lỗi dễ hơn.
+// 0 là giá trị mặc định theo khuyến nghị protobuf.
+enum Status {
+  STATUS_OK = 0;
+  STATUS_INVALID_ARG = 1; // tham số không hợp lệ (vd: index ngoài phạm vi)
+  STATUS_FAILED = 2;      // lỗi khác khi xử lý
+}
+
+// Message rỗng dùng cho RPC không cần tham số.
+message Empty {}
+
+// ======================= Service =======================
+service GpioDemo {
+  // ==== RPC cũ (giữ nguyên chữ ký để tương thích), nhưng SimpleReply nay có thêm status ====
+  // Nhấn nút (giả lập): index ∈ {0,1}
+  rpc PressButton(ButtonReq) returns (SimpleReply);
+
+  // Nhả nút (giả lập): index ∈ {0,1}
+  rpc ReleaseButton(ButtonReq) returns (SimpleReply);
+
+  // Lấy trạng thái LED hiện tại (không thay đổi mô phỏng).
+  rpc GetLedState(Empty) returns (LedState);
+
+  // ==== RPC mới (tuỳ chọn, tiện cho demo/CI) ====
+  // Đưa mô phỏng về trạng thái ban đầu (tắt led, nhả nút, reset counter...).
+  rpc Reset(Empty) returns (SimpleReply);
+
+  // Cấu hình mô phỏng: số lượng LED, active low, giá trị khởi tạo...
+  rpc Configure(ConfigureReq) returns (SimpleReply);
+
+  // (Tuỳ chọn) Stream trạng thái LED về client mỗi khi có thay đổi.
+  // Thích hợp cho UI realtime; server có thể push sau Press/Release/Reset/Configure.
+  rpc EventStream(Empty) returns (stream LedState);
+}
+
+// ======================= Requests =======================
+message ButtonReq {
+  // Chỉ số nút: 0 hoặc 1 (mặc định demo có 2 nút BTN0/BTN1).
+  // Server nên trả STATUS_INVALID_ARG nếu ngoài phạm vi.
+  int32 index = 1;
+}
+
+message ConfigureReq {
+  // Số lượng LED trong mô phỏng (ví dụ: 4). Nếu <=0, server có thể trả STATUS_INVALID_ARG.
+  int32 led_count = 1;
+
+  // Nếu true: logic 1 → LED tắt (active-low). Nếu false: logic 1 → LED sáng (active-high).
+  bool leds_active_low = 2;
+
+  // Giá trị khởi tạo cho toàn bộ LED sau cấu hình (0/1). Server có thể chuẩn hoá về {0,1}.
+  int32 initial_value = 3;
+
+  // (Tuỳ chọn) Reset luôn trạng thái nút/đếm về mặc định sau khi cấu hình.
+  bool reset_after = 4;
+}
+
+
+// ======================= Responses =======================
+message LedState {
+  // Trạng thái từng LED theo thứ tự LSB..MSB. Mặc định 0/1.
+  // Nếu bạn chắc chắn chỉ 0/1, có thể chuyển sang repeated bool trong tương lai.
+  repeated int32 leds = 1;
+}
+
+message SimpleReply {
+  // Thông điệp người đọc (giữ #1 để tương thích ngược).
+  string msg = 1;
+
+  // Mã trạng thái máy đọc (mới thêm, #2 để không phá cũ).
+  Status status = 2;
+}
