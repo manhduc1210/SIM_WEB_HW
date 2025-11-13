@@ -15,6 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel, Field
 
+# #
+# from fastapi import WebSocket, WebSocketDisconnect
+# import asyncio
+# # ---- global state cho WS ----
+# _ws_clients = set()          # tập các WebSocket đang kết nối
+# _led_cache = None            # cache frame LED gần nhất
+# _led_pump_task = None        # asyncio.Task cho vòng poll & broadcast
+
 # ================= Common =================
 SOCK_PATH = "/tmp/gpio_sim.sock"
 RECV_BUFSZ = 4096
@@ -205,7 +213,7 @@ def run_http_server():
 
 # ================= Entry =================
 if __name__ == "__main__":
-    t = threading.Thread(target=run_grpc_server, daemon=True)
-    t.start()
+    # t = threading.Thread(target=run_grpc_server, daemon=True)
+    # t.start()
     # chạy HTTP ở main thread (để Ctrl+C ngắt gọn)
     run_http_server()
